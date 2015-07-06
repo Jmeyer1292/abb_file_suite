@@ -6,6 +6,8 @@ project(abb_file_suite)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   roscpp
+  trajectory_msgs
+  message_generation
 )
 
 ## System dependencies are found with CMake's conventions
@@ -49,11 +51,10 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+add_service_files(
+  FILES
+  ExecuteProgram.srv
+)
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -63,10 +64,10 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs  # Or other packages containing msgs
-# )
+generate_messages(
+  DEPENDENCIES
+  std_msgs  # Or other packages containing msgs
+)
 
 ###################################
 ## catkin specific configuration ##
@@ -78,9 +79,9 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES abb_file_suite
-#  CATKIN_DEPENDS roscpp
+  INCLUDE_DIRS include
+  LIBRARIES ros_abb_ftp_interface
+  CATKIN_DEPENDS roscpp trajectory_msgs message_runtime
 #  DEPENDS system_lib
 )
 
@@ -88,29 +89,37 @@ catkin_package(
 ## Build ##
 ###########
 
-## Specify additional locations of header files
-## Your package locations should be listed before other locations
-# include_directories(include)
+add_subdirectory(rapid_generator)
+
 include_directories(
+  include
+  rapid_generator/include
   ${catkin_INCLUDE_DIRS}
 )
 
 ## Declare a cpp library
-# add_library(abb_file_suite
-#   src/${PROJECT_NAME}/abb_file_suite.cpp
-# )
+add_library(ros_abb_ftp_interface
+ src/abb_motion_ftp_downloader.cpp
+ src/ftp_upload.cpp
+)
 
 ## Declare a cpp executable
-# add_executable(abb_file_suite_node src/abb_file_suite_node.cpp)
+add_executable(ros_abb_ftp_interface_node src/abb_motion_ftp_downloader_node.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
-# add_dependencies(abb_file_suite_node abb_file_suite_generate_messages_cpp)
+add_dependencies(ros_abb_ftp_interface_node abb_file_suite_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
-# target_link_libraries(abb_file_suite_node
-#   ${catkin_LIBRARIES}
-# )
+target_link_libraries(ros_abb_ftp_interface
+  rapid_generator
+  curl
+)
+
+target_link_libraries(ros_abb_ftp_interface_node
+ ros_abb_ftp_interface
+ ${catkin_LIBRARIES}
+)
 
 #############
 ## Install ##
