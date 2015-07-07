@@ -79,7 +79,7 @@ generate_messages(
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-  INCLUDE_DIRS include
+  INCLUDE_DIRS include rapid_generator/include
   LIBRARIES ros_abb_ftp_interface
   CATKIN_DEPENDS roscpp trajectory_msgs message_runtime
 #  DEPENDS system_lib

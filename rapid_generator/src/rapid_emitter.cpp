@@ -18,20 +18,17 @@ bool rapid_emitter::emitRapidFile(std::ostream& os,
   // Emit Process Declarations
   emitProcessDeclarations(os, params, 1);
   // Write beginning of procedure
-  os << "\nPROC TestProc()\n";
+  os << "\nPROC Godel_Blend()\n";
   // For 0 to lengthFreeMotion, emit free moves
   for (std::size_t i = 0; i < startProcessMotion; ++i)
   {
-    if (i == 0)
-    {
-      emitFreeMotion(os, params, i, true, false);
-    }
-    else
-    {
-      emitFreeMotion(os, params, i);
-    }
+    if (i == 0) emitFreeMotion(os, params, i, 0.0, true);
+    else if (i == (startProcessMotion - 1)) emitFreeMotion(os, params, i, points[i].duration_, true);
+    else emitFreeMotion(os, params, i, points[i].duration_, false);
   }
-  emitSetOutput(os, params, 0);
+  
+  emitSetOutput(os, params, 1);
+  
   // for lengthFreeMotion to end of points, emit grind moves
   for (std::size_t i = startProcessMotion; i < endProcessMotion; ++i)
   {
@@ -48,19 +45,15 @@ bool rapid_emitter::emitRapidFile(std::ostream& os,
       emitGrindMotion(os, params, i);
     }
   }
-  emitSetOutput(os, params, 1);
+  
+  emitSetOutput(os, params, 0);
+  
   // for lengthFreeMotion to end of points, emit grind moves
   for (std::size_t i = endProcessMotion; i < points.size(); ++i)
   {
-    if (i == points.size() - 1)
-    {
-      emitFreeMotion(os, params, i, false, true);
-    }
-    else
-    {
-      emitFreeMotion(os, params, i);
-    }
-    
+    if (i == endProcessMotion) emitFreeMotion(os, params, i, 0.0, true);
+    else if (i == (points.size() - 1)) emitFreeMotion(os, params, i, points[i].duration_, true);
+    else emitFreeMotion(os, params, i, points[i].duration_, false);
   }
 
   os << "EndProc\n";
@@ -94,17 +87,18 @@ bool rapid_emitter::emitGrindMotion(std::ostream& os, const ProcessParams& param
   return os.good();
 }
 
-bool rapid_emitter::emitFreeMotion(std::ostream& os, const ProcessParams& params, size_t n, bool start, bool end)
+bool rapid_emitter::emitFreeMotion(std::ostream& os, const ProcessParams& params, size_t n, double duration, bool stop_at)
 {
-  if (start || end)
+  const char* zone = stop_at ? "fine" : "z20";
+
+  if (duration > 0.0)
   {
-    os << "MoveJ CalcRobT(jTarget_" << n << ",tool0), vMotionSpeed, fine, tool0;\n";
+    os << "MoveJ CalcRobT(jTarget_" << n << ",tool0), vMotionSpeed," << zone << ", tool0;\n";
   }
   else
-  {
-    os << "MoveL CalcRobT(jTarget_" << n << ",tool0), vMotionSpeed, z40, tool0;\n";
+  {  
+    os << "MoveJ CalcRobT(jTarget_" << n << ",tool0), vMotionSpeed, \\T:=" << duration << ", " << zone << ", tool0;\n";
   }
-  
   return os.good();
 }
 bool rapid_emitter::emitJointPosition(std::ostream& os, const TrajectoryPt& pt, size_t n)
@@ -162,10 +156,22 @@ bool rapid_emitter::emitJointTrajectoryFile(std::ostream &os, const std::vector<
   // Write beginning of procedure
   os << "\nPROC Godel_Blend()\n";
   // For 0 to lengthFreeMotion, emit free moves
-  for (std::size_t i = 0; i < points.size(); ++i)
+  if (points.empty())
   {
-    emitFreeMotion(os, params, i, true);
+    return false;
   }
+
+  // Write first point as normal move abs j so that the robot gets to where it needs to be
+  emitFreeMotion(os, params, 0, 0.0, true);
+
+  // The second motion 
+  for (std::size_t i = 1; i < points.size() - 1; ++i)
+  {
+    emitFreeMotion(os, params, i, points[i].duration_, false);
+  }
+
+  // Stop at the last point
+  emitFreeMotion(os, params, points.size() - 1, points.back().duration_, true);
 
   os << "EndProc\n";
   // write any footers including main procedure calling the above

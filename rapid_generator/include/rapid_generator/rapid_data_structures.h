@@ -11,11 +11,13 @@ struct TrajectoryPt
 {
   typedef std::vector<double> value_type;
 
-  TrajectoryPt(const std::vector<double>& positions)
+  TrajectoryPt(const std::vector<double>& positions, double duration = 0.0)
     : positions_(positions)
+    , duration_(duration)
   {}
 
   value_type positions_;
+  double duration_;
 };
 
 struct ProcessParams

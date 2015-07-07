@@ -10,7 +10,7 @@ namespace rapid_emitter
 {
   bool emitJointPosition(std::ostream& os, const TrajectoryPt& pt, size_t n);
   bool emitGrindMotion(std::ostream& os, const ProcessParams& params, size_t n, bool start = false, bool end = false);
-  bool emitFreeMotion(std::ostream& os, const ProcessParams& params, size_t n, bool start = false, bool end = false);
+  bool emitFreeMotion(std::ostream& os, const ProcessParams& params, size_t n, double duration, bool stop_at);
   bool emitSetOutput(std::ostream& os, const ProcessParams& params, size_t value);
   bool emitProcessDeclarations(std::ostream& os, const ProcessParams& params, size_t value);
 

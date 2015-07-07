@@ -14,8 +14,8 @@ static size_t getcontentlengthfunc(void *ptr, size_t size, size_t nmemb, void *s
   /* _snscanf() is Win32 specific */
   r = sscanf(static_cast<const char*>(ptr), "Content-Length: %ld\n", &len);
 
-  // if (r) /* Microsoft: we don't read the specs */
-    // *((long *) stream) = len;
+  if (r) /* Microsoft: we don't read the specs */
+    *((long *) stream) = len;
 
   return size * nmemb;
 }
@@ -130,7 +130,7 @@ bool abb_file_suite::uploadFile(const std::string &ftp_addr, const std::string &
 
   std::string to = "ftp://" + ftp_addr + "/mGodelBlend.mod";
 
-  bool result = upload(curlhandle, to.c_str(), filepath.c_str(), 10, 3);
+  bool result = upload(curlhandle, to.c_str(), filepath.c_str(), 0, 5);
 
   curl_easy_cleanup(curlhandle);
   curl_global_cleanup();

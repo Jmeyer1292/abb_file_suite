@@ -55,7 +55,16 @@ void abb_file_suite::AbbMotionFtpDownloader::handleJointTrajectory(const traject
   {
     std::vector<double> tmp = toDegrees(traj.points[i].positions);
     if (j23_coupled_) linkageAdjust(tmp);
-    pts.push_back(tmp);
+
+    double duration = 0.0;
+    // Timing
+    if (i > 0)
+    {
+      duration = (traj.points[i].time_from_start - traj.points[i-1].time_from_start).toSec(); 
+    }
+
+    rapid_emitter::TrajectoryPt pt (tmp, duration);
+    pts.push_back(pt);
   }
 
   rapid_emitter::ProcessParams params;
