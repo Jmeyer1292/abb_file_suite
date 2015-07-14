@@ -122,7 +122,9 @@ bool rapid_emitter::emitSetOutput(std::ostream& os, const ProcessParams& params,
   if (params.wolf == false)
   {
     os << "WaitTime\\InPos, 0.01;\n";
-    os << "SETDO " << params.output_name << ", " << value << ";\n";
+    os << "SETDO " << "EX_Vlv_1A_12" << ", " << value << ";\n";
+    os << "SETDO " << "EX_Vlv_1B_13" << ", " << value << ";\n";
+    // os << "SETDO " << params.output_name << ", " << value << ";\n";
   }
   return os.good();
 } 
