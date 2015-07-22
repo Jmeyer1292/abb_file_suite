@@ -91,7 +91,7 @@ bool rapid_emitter::emitFreeMotion(std::ostream& os, const ProcessParams& params
 {
   const char* zone = stop_at ? "fine" : "z20";
 
-  if (duration > 0.0)
+  if (duration <= 0.0)
   {
     os << "MoveJ CalcRobT(jTarget_" << n << ",tool0), vMotionSpeed," << zone << ", tool0;\n";
   }
