@@ -7,45 +7,67 @@
 #include "rapid_generator/rapid_emitter.h"
 #include "ftp_upload.h"
 
-static inline double toDegrees(const double radians) { return radians * 180.0 / M_PI; }
-static inline std::vector<double> toDegrees(const std::vector<double>& radians)
+// Constants
+const static std::string EXECUTE_PROGRAM_SERVICE_NAME = "execute_program";
+const static std::string RAPID_MODULE_NAME = "mGodel_blend.mod";
+
+// Utility functions
+static double toDegrees(const double radians) { return radians * 180.0 / M_PI; }
+
+static std::vector<double> toDegrees(const std::vector<double>& radians)
 {
   std::vector<double> result;
   result.reserve(radians.size());
-  for (std::size_t i = 0; i < radians.size(); ++i) result.push_back(toDegrees(radians[i]));
+  for (std::size_t i = 0; i < radians.size(); ++i)
+    result.push_back(toDegrees(radians[i]));
   return result;
 }
 
-static void linkageAdjust(std::vector<double>& joints)
+static void linkageAdjust(std::vector<double>& joints) { joints[2] += joints[1]; }
+
+/**
+ * Joins a directory and filename while being independent to whether the user
+ * added a trailing slash or not.
+ *
+ * @param  dir      absolute path to directory
+ * @param  filename file name
+ * @return          absolute path to file
+ */
+static std::string fileJoin(const std::string& dir, const std::string& filename)
 {
-  joints[2] += joints[1];
+  if (dir[dir.length() - 1] == '/')
+    return (dir + filename);
+  else
+    return (dir + std::string("/") + filename);
 }
 
-abb_file_suite::AbbMotionFtpDownloader::AbbMotionFtpDownloader(const std::string &ip,
-                                                               const std::string &listen_topic,
-                                                               ros::NodeHandle &nh,
-                                                               bool j23_coupled)
-  : ip_(ip)
-  , j23_coupled_(j23_coupled)
+abb_file_suite::AbbMotionFtpDownloader::AbbMotionFtpDownloader(const std::string& ip,
+                                                               const std::string& listen_topic,
+                                                               ros::NodeHandle& nh,
+                                                               const std::string& ftp_user, 
+                                                               const std::string& ftp_pass,
+                                                               bool j23_coupled,
+                                                               const std::string& temp_file_loc)
+    : ip_(ip), temp_file_loc_(temp_file_loc), user_(ftp_user), pwd_(ftp_pass), j23_coupled_(j23_coupled)
 {
-  trajectory_sub_ = nh.subscribe(
-        listen_topic,
-        10,
-        &AbbMotionFtpDownloader::handleJointTrajectory,
-        this);
+  trajectory_sub_ =
+      nh.subscribe(listen_topic, 10, &AbbMotionFtpDownloader::handleJointTrajectory, this);
 
-  server_ = nh.advertiseService("execute_program", &AbbMotionFtpDownloader::handleServiceCall, this);
+  server_ = nh.advertiseService(EXECUTE_PROGRAM_SERVICE_NAME,
+                                &AbbMotionFtpDownloader::handleServiceCall, this);
 }
 
-void abb_file_suite::AbbMotionFtpDownloader::handleJointTrajectory(const trajectory_msgs::JointTrajectory &traj)
+void abb_file_suite::AbbMotionFtpDownloader::handleJointTrajectory(
+    const trajectory_msgs::JointTrajectory& traj)
 {
-  ROS_INFO_STREAM("Trajectory received");
+  // Create temporary file
+  const std::string temp_file_path = fileJoin(temp_file_loc_, RAPID_MODULE_NAME);
   // generate temporary file with appropriate rapid code
-  std::ofstream ofh ("/tmp/mGodel_blend.mod");
+  std::ofstream ofh(temp_file_path.c_str());
 
   if (!ofh)
   {
-    ROS_WARN_STREAM("Could not create file");
+    ROS_WARN_STREAM("Could not create file: " << temp_file_path);
     return;
   }
 
@@ -54,37 +76,38 @@ void abb_file_suite::AbbMotionFtpDownloader::handleJointTrajectory(const traject
   for (std::size_t i = 0; i < traj.points.size(); ++i)
   {
     std::vector<double> tmp = toDegrees(traj.points[i].positions);
-    if (j23_coupled_) linkageAdjust(tmp);
+    if (j23_coupled_)
+      linkageAdjust(tmp);
 
     double duration = 0.0;
     // Timing
     if (i > 0)
     {
-      duration = (traj.points[i].time_from_start - traj.points[i-1].time_from_start).toSec(); 
+      duration = (traj.points[i].time_from_start - traj.points[i - 1].time_from_start).toSec();
     }
 
-    rapid_emitter::TrajectoryPt pt (tmp, duration);
+    rapid_emitter::TrajectoryPt pt(tmp, duration);
     pts.push_back(pt);
   }
 
   rapid_emitter::ProcessParams params;
-  params.wolf = false;
+  params.wolf_mode = false;
   rapid_emitter::emitJointTrajectoryFile(ofh, pts, params);
+  ofh.flush();
   ofh.close();
 
   // send to controller
-  if (!uploadFile(ip_ + "/PARTMODULES", "/tmp/mGodel_blend.mod"))
+  if (!uploadFile(ip_ + "/PARTMODULES", temp_file_path, user_, pwd_))
   {
     ROS_WARN("Could not upload joint trajectory to remote ftp server");
   }
 }
 
-bool abb_file_suite::AbbMotionFtpDownloader::handleServiceCall(abb_file_suite::ExecuteProgram::Request &req,
-                                                               abb_file_suite::ExecuteProgram::Response &res)
+bool abb_file_suite::AbbMotionFtpDownloader::handleServiceCall(
+    abb_file_suite::ExecuteProgram::Request& req, abb_file_suite::ExecuteProgram::Response& res)
 {
-  ROS_INFO("Handling program execution request");
   // Check for existence
-  std::ifstream ifh (req.file_path.c_str());
+  std::ifstream ifh(req.file_path.c_str());
   if (!ifh)
   {
     ROS_WARN("Could not open file '%s'.", req.file_path.c_str());
@@ -92,5 +115,5 @@ bool abb_file_suite::AbbMotionFtpDownloader::handleServiceCall(abb_file_suite::E
   }
   ifh.close();
 
-  return uploadFile(ip_ + "/PARTMODULES", req.file_path.c_str());
+  return uploadFile(ip_ + "/PARTMODULES", req.file_path.c_str(),  user_, pwd_);
 }
