@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(abb_file_suite)
 
+add_definitions(-std=c++11)
+
 find_package(catkin REQUIRED COMPONENTS
   message_generation
   roscpp
@@ -66,6 +68,11 @@ target_link_libraries(ros_abb_ftp_interface_node
  ${catkin_LIBRARIES}
 )
 
+add_executable(rapid_gen_node src/generator_test_node.cpp)
+target_link_libraries(rapid_gen_node
+  rapid_generator
+  ${catkin_LIBRARIES}
+)
 #############
 ## Install ##
 #############
