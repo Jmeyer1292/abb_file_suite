@@ -37,6 +37,13 @@ public:
 
   void add(std::unique_ptr<Instruction> instruction);
 
+  template<typename Iter>
+  void addSequence(Iter begin, Iter end)
+  {
+    for (Iter it = begin; it != end; ++it)
+      add(std::move(*it));
+  }
+
 private:
   std::vector<std::unique_ptr<Instruction>> instructions_;
 };

@@ -69,7 +69,13 @@ void rapid_generator::MoveJInstruction::generate(rapid_generator::ProgramInterfa
 
   // write body
   const static auto zone = "z20";
-  interface.body << "MoveAbsJ jTarget_" << n << ", v200, \\T:=" << duration_ << ", " << zone << ", tool1;\n";
+  const static auto default_speed = "v200";
+  interface.body << "MoveAbsJ jTarget_" << n << ", " << default_speed << ",";
+  if (duration_ > 0.0)
+  {
+    interface.body << "\\T:=" << duration_ << ",";
+  }
+  interface.body << zone << ", tool1;\n";
 }
 
 // Move
