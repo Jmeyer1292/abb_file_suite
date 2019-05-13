@@ -3,6 +3,8 @@ project(abb_file_suite)
 
 add_definitions(-std=c++11)
 
+find_package(CURL REQUIRED)
+
 find_package(catkin REQUIRED COMPONENTS
   message_generation
   roscpp
@@ -31,7 +33,7 @@ catkin_package(
     trajectory_msgs 
     message_runtime
   DEPENDS
-    curl
+    CURL
 )
 
 ###########
@@ -44,6 +46,7 @@ add_subdirectory(rapid_generator)
 include_directories(
   include
   rapid_generator/include
+  ${CURL_INCLUDE_DIRS}
   ${catkin_INCLUDE_DIRS}
 )
 
@@ -60,7 +63,7 @@ add_dependencies(ros_abb_ftp_interface abb_file_suite_generate_messages_cpp)
 
 target_link_libraries(ros_abb_ftp_interface
   rapid_generator
-  curl
+  ${CURL_LIBRARIES}
 )
 
 target_link_libraries(ros_abb_ftp_interface_node
